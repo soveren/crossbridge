@@ -2,32 +2,42 @@
 pragma solidity 0.8.20;
 
 contract Coprocessor {
-    uint job_id = 0;
-    address payable private immutable coprocessor;
+    address payable public immutable coprocessor;
+    uint public immutable minimalValue = 0.001 ether;
+
+    uint public id = 0;
+    mapping(uint => string) public jobs;
+
+    error NotEnoughValue();
+    error OnlyCoprocessor();
+
 
     constructor(address _coprocessor) {
         coprocessor = payable(_coprocessor);
     }
 
-    mapping(uint => string) public jobs;
-
     event NewJob(uint indexed job_id);
+    event Bridge(uint indexed id, uint balance, uint indexed chainId, address indexed receiver, uint value);
+
+
+    // Function to create a new bridge job
+    function bridge(uint chainId, address receiver)
+    public payable returns (uint newJobId) {
+        uint value = msg.value;
+        if (value < minimalValue) revert NotEnoughValue();
+        coprocessor.transfer(value);
+        newJobId = id;
+        emit Bridge(newJobId, coprocessor.balance, chainId, receiver, value);
+        id = newJobId + 1;
+    }
+
 
     // Function to create a new job
     function newJob() public payable {
-        // Require at least 0.01 ETH to be sent with the call
-        require(msg.value >= 0.01 ether, "Minimum 0.01 ETH not met");
-
-        // Forward the ETH received to the coprocessor address
-        // to pay for the submission of the job result back to the EVM
-        // contract.
+        if (msg.value < minimalValue) revert NotEnoughValue();
         coprocessor.transfer(msg.value);
-
-        // Emit the new job event
-        emit NewJob(job_id);
-
-        // Increment job counter
-        job_id++;
+        emit NewJob(id);
+        id++;
     }
 
     function getResult(uint _job_id) public view returns (string memory) {
@@ -35,10 +45,7 @@ contract Coprocessor {
     }
 
     function callback(string calldata _result, uint256 _job_id) public {
-        require(
-            msg.sender == coprocessor,
-            "Only the coprocessor can call this function"
-        );
+        if (msg.sender != coprocessor) revert OnlyCoprocessor();
         jobs[_job_id] = _result;
     }
 }
