@@ -3,11 +3,17 @@ pragma solidity 0.8.20;
 
 interface IBridgeCallback {
     /// @dev Callback function to receive the result of the bridge call
-    /// @dev Function may receive change (unused value) back
+    /// @notice Function may receive change (unused value) back
     /// @param jobId The id of the job
     /// @param success The success status of the call on the destination chain
     /// @param result The result of the call on the destination chain (when data is provided in the bridge call)
     function bridgeCallback(uint jobId, bool success, bytes calldata result) payable external;
+}
+
+interface IFlashLoanCallback {
+    /// @dev Callback function to receive the result of the flash loan
+    /// @param fee The fee of the flash loan
+    function flashLoanCallback(uint fee) payable external;
 }
 
 interface IBridge {
@@ -24,8 +30,9 @@ contract Coprocessor is IBridge {
 
     mapping(uint => string) public jobs;
 
-    error NotEnoughValue();
+    error ValueTooSmall();
     error OnlyCoprocessor();
+    error WrongBalance();
 
     constructor(address _coprocessor) {
         coprocessor = payable(_coprocessor);
@@ -54,21 +61,29 @@ contract Coprocessor is IBridge {
     /// @param callbackGasValue The gas value to call callback on source chain with return data (optional: 0 - callback not needed). Sender must implement IBridgeCallback. callbackGasValue is deducted from the msg.value and not transferred to the receiver.
     /// @return jobId The id of the new bridge transfer job
     function bridge(int chainId, address receiver, uint transferValue, bytes calldata dataWithSelector, uint callbackGasValue)
-    public payable returns (uint jobId)  {
-        if (msg.value < minValue) revert NotEnoughValue();
+    external payable returns (uint jobId)  {
+        if (msg.value < minValue) revert ValueTooSmall();
         coprocessor.transfer(msg.value);
         jobId = id++;
         emit Bridge(jobId, coprocessor.balance, chainId, receiver, msg.value, transferValue, dataWithSelector, callbackGasValue);
     }
 
+    receive() external payable {}
 
+    function flashLoan(uint amount) external {
+        uint balance = address(this).balance;
+        msg.sender.transfer(amount);
+        uint fee = amount >> 10; // Same as amount / 1024 or amount * 0.09765625%
+        IFlashLoanCallback(msg.sender).flashLoanCallback(fee);
+        if (address(this).balance < (balance + fee)) revert WrongBalance();
+    }
 
 
     // ===== JOB =====
 
     // Function to create a new job
     function newJob() public payable {
-        if (msg.value < minValue) revert NotEnoughValue();
+        if (msg.value < minValue) revert ValueTooSmall();
         coprocessor.transfer(msg.value);
         emit NewJob(id);
         id++;
