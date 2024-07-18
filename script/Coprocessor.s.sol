@@ -11,13 +11,14 @@ contract MyScript is Script {
         // we use that key to broadcast all following transactions
         vm.startBroadcast(deployerPrivateKey);
 
-        // this creates the contract. it will have the same address every time if we use a 
+        // this creates the contract. it will have the same address every time if we use a
         // new instance of anvil for every deployment.
 
         Coprocessor coprocessor = new Coprocessor(chain_fusion_canister_address);
 
        // we create 3 jobs
         for (uint256 index = 0; index < 3; index++) {
+            // TODO replace to bridge job
             coprocessor.newJob{value: 0.1 ether}();
         }
 
