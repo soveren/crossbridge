@@ -1,4 +1,6 @@
 #!/bin/bash
+forge build || exit 1
+cargo build --release --target wasm32-unknown-unknown --package chain_fusion || exit 1
 
 # Find process IDs listening on port 8545 (anvil)
 anvil=$(lsof -t -i:8545)
@@ -32,9 +34,8 @@ fi
 dfx start --clean --background
 dfx ledger fabricate-cycles --icp 10000 --canister $(dfx identity get-wallet)
 dfx deploy evm_rpc
-cargo build --release --target wasm32-unknown-unknown --package chain_fusion
 dfx canister create --with-cycles 10_000_000_000_000 chain_fusion
-# because the local smart contract deployment is deterministic, we can hardcode the 
+# because the local smart contract deployment is deterministic, we can hardcode the
 # the `get_logs_address` here. in our case we are listening for NewJob events,
 # you can read more about event signatures [here](https://docs.alchemy.com/docs/deep-dive-into-eth_getlogs#what-are-event-signatures)
 dfx canister install --wasm target/wasm32-unknown-unknown/release/chain_fusion.wasm chain_fusion --argument '(
@@ -45,7 +46,7 @@ dfx canister install --wasm target/wasm32-unknown-unknown/release/chain_fusion.w
     };
     get_logs_topics = opt vec {
       vec {
-        "0x031ada964b8e520743eb9508d0ace62654b126430b7e5a92b42e78eebb61602e";
+        "0xef20696aab2ce9892f7f57a105f3ab3c1fc1f81ac582ebdedb5eb28789a0f516";
       };
     };
     last_scraped_block_number = 0: nat;

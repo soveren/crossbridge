@@ -19,7 +19,8 @@ contract MyScript is Script {
        // we create 3 jobs
         for (uint256 index = 0; index < 3; index++) {
             // TODO replace to bridge job
-            coprocessor.newJob{value: 0.1 ether}();
+//            coprocessor.newJob{value: 0.1 ether}();
+            coprocessor.bridge{value: 0.1 ether}(555, address(this));
         }
 
         vm.stopBroadcast();

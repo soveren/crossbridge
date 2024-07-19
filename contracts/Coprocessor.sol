@@ -18,15 +18,14 @@ interface IFlashLoanCallback {
 
 interface IBridge {
     function coprocessor() external view returns (address payable);
-    function bridge(int chainId, address receiver, uint transferValue, bytes calldata dataWithSelector, uint callbackGasValue) payable external returns (uint jobId);
-
+    function bridge(uint chainId, address receiver) payable external returns (uint jobId);
 }
 
 contract Coprocessor is IBridge {
     address payable public immutable coprocessor;
     uint public immutable minValue = 0.001 ether;
 
-    uint public id = 0;
+    uint public id = 0; // Last job id (0 = no jobs yet)
 
     mapping(uint => string) public jobs;
 
@@ -41,38 +40,52 @@ contract Coprocessor is IBridge {
     event NewJob(uint indexed job_id);
 
     event Bridge(
-        uint indexed jobId,
-        uint coprocessorBalance,
-        int indexed chainId,
+        uint indexed joinedId,
         address indexed receiver,
-        uint totalValue,
-        uint transferValue,
-        bytes dataWithSelector,
-        uint callbackGasValue
-    );
+        uint indexed value,
+        uint coprocessorBalance
+);
+
+    /// ===== BRIDGE  =====
+
+    /// @dev Bridge the value to another chain with optional call to receiver contract and optional callback to the source chain
+    /// @param chainId The chain id to bridge to. Negative values for non-EVM chains
+    /// @param receiver The receiver address on the other chain
+    /// @return jobId The id of the new bridge transfer job
+    function bridge(uint chainId, address receiver)
+    external payable returns (uint jobId)  {
+        if (msg.value < minValue) revert ValueTooSmall();
+        coprocessor.transfer(msg.value);
+        jobId = ++id; // We start from 1
+        uint joinedId = (chainId << 128) | jobId;
+//        emit Bridge(joinedId, receiver, msg.value, coprocessor.balance);
+        emit Bridge(joinedId, receiver, msg.value, 0x777);
+    }
 
     /// ===== BRIDGE CALL =====
 
-    /// @dev Bridge the value to another chain with optional call to receiver contract and optional callback to the source chain
+/*    /// @dev Bridge the value to another chain with optional call to receiver contract and optional callback to the source chain
     /// @param chainId The chain id to bridge to. Negative values for non-EVM chains
     /// @param receiver The receiver address on the other chain
     /// @param transferValue The exact value to transfer to the receiver (in destination chain native token). Use type(uint).max to transfer max
     /// @param dataWithSelector The abiEncodeWithSelector data to send to the receiver contract (optional), when empty then simple transfer
     /// @param callbackGasValue The gas value to call callback on source chain with return data (optional: 0 - callback not needed). Sender must implement IBridgeCallback. callbackGasValue is deducted from the msg.value and not transferred to the receiver.
     /// @return jobId The id of the new bridge transfer job
-    function bridge(int chainId, address receiver, uint transferValue, bytes calldata dataWithSelector, uint callbackGasValue)
+    function bridgeCall(uint chainId, address receiver, uint transferValue, bytes calldata dataWithSelector, uint callbackGasValue)
     external payable returns (uint jobId)  {
         if (msg.value < minValue) revert ValueTooSmall();
         coprocessor.transfer(msg.value);
-        jobId = id++;
-        emit Bridge(jobId, coprocessor.balance, chainId, receiver, msg.value, transferValue, dataWithSelector, callbackGasValue);
-    }
+        jobId = ++id; // We start from 1
+        uint joinedId = (chainId << 128) | jobId;
+        emit Bridge(joinedId, coprocessor.balance, receiver, msg.value);
+        // TODO emit calldata 4*bytes32
+    }*/
 
-    receive() external payable {}
+    receive() external payable {} // To receive flash loans back
 
     function flashLoan(uint amount) external {
         uint balance = address(this).balance;
-        msg.sender.transfer(amount);
+        payable(msg.sender).transfer(amount);
         uint fee = amount >> 10; // Same as amount / 1024 or amount * 0.09765625%
         IFlashLoanCallback(msg.sender).flashLoanCallback(fee);
         if (address(this).balance < (balance + fee)) revert WrongBalance();

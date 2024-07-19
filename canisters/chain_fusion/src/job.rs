@@ -4,6 +4,7 @@ mod submit_result;
 use std::fmt;
 
 use ethers_core::types::U256;
+use ethers_core::types::U128;
 use evm_rpc_canister_types::LogEntry;
 use ic_cdk::println;
 use submit_result::submit_result;
@@ -18,6 +19,8 @@ pub async fn job(event_source: LogSource, event: LogEntry) {
     // because we deploy the canister with topics only matching
     // NewJob events we can safely assume that the event is a NewJob.
     let new_job_event = NewJobEvent::from(event);
+    println!("new_job_event: {new_job_event:?}");
+
     // this calculation would likely exceed an ethereum blocks gas limit
     // but can easily be calculated on the IC
     let result = fibonacci(20);
@@ -31,23 +34,42 @@ pub async fn job(event_source: LogSource, event: LogEntry) {
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct NewJobEvent {
     pub job_id: U256,
+    pub coprocessor_balance: U256,
+    pub chain_id: U256,
+    pub receiver_address: String,
+    pub value_in: U256
 }
 
 impl fmt::Debug for NewJobEvent {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("NewJobEvent")
             .field("job_id", &self.job_id)
+            .field("coprocessor_balance", &self.coprocessor_balance)
+            .field("chain_id", &self.chain_id)
+            .field("receiver_address", &self.receiver_address)
+            .field("value_in", &self.value_in)
             .finish()
     }
 }
 
 impl From<LogEntry> for NewJobEvent {
     fn from(entry: LogEntry) -> NewJobEvent {
+        println!("NewJobEvent entry.topics.len: #{:?}", entry.topics.len());
         // we expect exactly 2 topics from the NewJob event.
+        // TODO check first topic for event signature
         // you can read more about event signatures [here](https://docs.alchemy.com/docs/deep-dive-into-eth_getlogs#what-are-event-signatures)
-        let job_id =
-            U256::from_str_radix(&entry.topics[1], 16).expect("the token id should be valid");
+        let joined_id = U256::from_str_radix(&entry.topics[1], 16).expect("the token id should be valid");
+        let job_id = joined_id & U256::from(U128::max_value());
+        let chain_id = joined_id >> 128;
+        if entry.topics.len() == 2 {
+            NewJobEvent { job_id, coprocessor_balance:U256::from( 0), chain_id, receiver_address:String::new(), value_in:U256::from(0) }
 
-        NewJobEvent { job_id }
+        } else {
+            let receiver_address = entry.topics[2].clone();
+            let value_in = U256::from_str_radix(&entry.topics[3], 16).expect("the token value_in should be valid");
+            let coprocessor_balance = U256::from_str_radix(&entry.data, 16).expect("the token coprocessor_balance should be valid");
+
+            NewJobEvent { job_id, coprocessor_balance, chain_id, receiver_address, value_in }
+        }
     }
 }
