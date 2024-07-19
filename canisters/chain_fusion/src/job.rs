@@ -19,7 +19,7 @@ pub async fn job(event_source: LogSource, event: LogEntry) {
     // because we deploy the canister with topics only matching
     // NewJob events we can safely assume that the event is a NewJob.
     let new_job_event = NewJobEvent::from(event);
-    println!("new_job_event: {new_job_event:?}");
+    println!("<<<NEW JOB>>>: {new_job_event:?}");
 
     // this calculation would likely exceed an ethereum blocks gas limit
     // but can easily be calculated on the IC
@@ -54,22 +54,15 @@ impl fmt::Debug for NewJobEvent {
 
 impl From<LogEntry> for NewJobEvent {
     fn from(entry: LogEntry) -> NewJobEvent {
-        println!("NewJobEvent entry.topics.len: #{:?}", entry.topics.len());
-        // we expect exactly 2 topics from the NewJob event.
-        // TODO check first topic for event signature
+        println!("NewJobEvent entry.topics.len: {:?}", entry.topics.len());
         // you can read more about event signatures [here](https://docs.alchemy.com/docs/deep-dive-into-eth_getlogs#what-are-event-signatures)
         let joined_id = U256::from_str_radix(&entry.topics[1], 16).expect("the token id should be valid");
         let job_id = joined_id & U256::from(U128::max_value());
         let chain_id = joined_id >> 128;
-        if entry.topics.len() == 2 {
-            NewJobEvent { job_id, coprocessor_balance:U256::from( 0), chain_id, receiver_address:String::new(), value_in:U256::from(0) }
+        let receiver_address = entry.topics[2].clone();
+        let value_in = U256::from_str_radix(&entry.topics[3], 16).expect("the token value_in should be valid");
+        let coprocessor_balance = U256::from_str_radix(&entry.data, 16).expect("the token coprocessor_balance should be valid");
 
-        } else {
-            let receiver_address = entry.topics[2].clone();
-            let value_in = U256::from_str_radix(&entry.topics[3], 16).expect("the token value_in should be valid");
-            let coprocessor_balance = U256::from_str_radix(&entry.data, 16).expect("the token coprocessor_balance should be valid");
-
-            NewJobEvent { job_id, coprocessor_balance, chain_id, receiver_address, value_in }
-        }
+        NewJobEvent { job_id, coprocessor_balance, chain_id, receiver_address, value_in }
     }
 }

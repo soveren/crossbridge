@@ -37,8 +37,6 @@ contract Coprocessor is IBridge {
         coprocessor = payable(_coprocessor);
     }
 
-    event NewJob(uint indexed job_id);
-
     event Bridge(
         uint indexed joinedId,
         address indexed receiver,
@@ -58,28 +56,10 @@ contract Coprocessor is IBridge {
         coprocessor.transfer(msg.value);
         jobId = ++id; // We start from 1
         uint joinedId = (chainId << 128) | jobId;
-//        emit Bridge(joinedId, receiver, msg.value, coprocessor.balance);
-        emit Bridge(joinedId, receiver, msg.value, 0x777);
+        emit Bridge(joinedId, receiver, msg.value, coprocessor.balance);
     }
 
-    /// ===== BRIDGE CALL =====
 
-/*    /// @dev Bridge the value to another chain with optional call to receiver contract and optional callback to the source chain
-    /// @param chainId The chain id to bridge to. Negative values for non-EVM chains
-    /// @param receiver The receiver address on the other chain
-    /// @param transferValue The exact value to transfer to the receiver (in destination chain native token). Use type(uint).max to transfer max
-    /// @param dataWithSelector The abiEncodeWithSelector data to send to the receiver contract (optional), when empty then simple transfer
-    /// @param callbackGasValue The gas value to call callback on source chain with return data (optional: 0 - callback not needed). Sender must implement IBridgeCallback. callbackGasValue is deducted from the msg.value and not transferred to the receiver.
-    /// @return jobId The id of the new bridge transfer job
-    function bridgeCall(uint chainId, address receiver, uint transferValue, bytes calldata dataWithSelector, uint callbackGasValue)
-    external payable returns (uint jobId)  {
-        if (msg.value < minValue) revert ValueTooSmall();
-        coprocessor.transfer(msg.value);
-        jobId = ++id; // We start from 1
-        uint joinedId = (chainId << 128) | jobId;
-        emit Bridge(joinedId, coprocessor.balance, receiver, msg.value);
-        // TODO emit calldata 4*bytes32
-    }*/
 
     receive() external payable {} // To receive flash loans back
 
@@ -93,14 +73,6 @@ contract Coprocessor is IBridge {
 
 
     // ===== JOB =====
-
-    // Function to create a new job
-    function newJob() public payable {
-        if (msg.value < minValue) revert ValueTooSmall();
-        coprocessor.transfer(msg.value);
-        emit NewJob(id);
-        id++;
-    }
 
     function getResult(uint _job_id) public view returns (string memory) {
         return jobs[_job_id];
