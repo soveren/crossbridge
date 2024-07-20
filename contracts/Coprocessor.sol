@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
+// TODO inherit from ERC20
 contract Coprocessor {
     address payable public immutable coprocessor;
 
-    mapping(uint => string) public jobs;
-    address payable public coprocessor;
+    mapping(uint => string) public jobs; // TODO remove after
 
     uint private constant DEPOSIT_CHAIN_ID = 0;
     uint private constant REDEEM_CHAIN_ID = type(uint).max;
@@ -58,7 +58,7 @@ contract Coprocessor {
     }
 
     function callback(string calldata _result, uint256 _job_id) public {
-        if (msg.sender != coprocessor) revert;
+        if (msg.sender != coprocessor) revert();
         jobs[_job_id] = _result;
     }
 }

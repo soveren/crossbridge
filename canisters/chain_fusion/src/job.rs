@@ -1,4 +1,4 @@
-mod calculate_result;
+// mod calculate_result;
 mod submit_result;
 
 use std::fmt;
@@ -8,7 +8,7 @@ use ic_cdk::println;
 use submit_result::submit_result;
 
 use crate::{
-    job::calculate_result::fibonacci,
+    // job::calculate_result::fibonacci,
     state::{mutate_state, LogSource},
 };
 
