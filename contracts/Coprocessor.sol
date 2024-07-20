@@ -1,21 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-interface IFlashLoanCallback {
-    /// @dev Callback function to receive the result of the flash loan
-    /// @param fee The fee of the flash loan
-    function flashLoanCallback(uint fee) payable external;
-}
-
 contract Coprocessor {
     address payable public immutable coprocessor;
 
-    uint public id = 0; // Last job id (0 = no jobs yet)
-
     mapping(uint => string) public jobs;
+    address payable public coprocessor;
 
-    error OnlyCoprocessor();
-    error WrongBalance();
+    uint private constant DEPOSIT_CHAIN_ID = 0;
+    uint private constant REDEEM_CHAIN_ID = type(uint).max;
 
     constructor(address _coprocessor) {
         coprocessor = payable(_coprocessor);
@@ -28,38 +21,44 @@ contract Coprocessor {
         uint coprocessorBalance
     );
 
-    /// ===== BRIDGE  =====
-
-    /// @dev Bridge the value to another chain with optional call to receiver contract and optional callback to the source chain
-    /// @param chainId The chain id to bridge to. Negative values for non-EVM chains
+    /// @dev Bridge the value to another chain
+    /// @param chainId The chain id to bridge to
     /// @param receiver The receiver address on the other chain
     function bridge(uint chainId, address receiver)
     external payable  {
         coprocessor.transfer(msg.value);
+        if (chainId == REDEEM_CHAIN_ID) revert();
         emit Bridge(chainId, receiver, msg.value, coprocessor.balance);
     }
 
+    /// @dev Deposit network token to the coprocessor. Coprocessor will mint shares token to the sender
+    function deposit()
+    external payable  {
+        revert('Not implemented');
+        coprocessor.transfer(msg.value);
+        // TODO separate event for deposit
+        emit Bridge(0, msg.sender, msg.value, coprocessor.balance);
+    }
 
-
-    receive() external payable {} // To receive flash loans back
-
-    function flashLoan(uint amount) external {
-        uint balance = address(this).balance;
-        payable(msg.sender).transfer(amount);
-        uint fee = amount >> 10; // Same as amount / 1024 or amount * 0.09765625%
-        IFlashLoanCallback(msg.sender).flashLoanCallback(fee);
-        if (address(this).balance < (balance + fee)) revert WrongBalance();
+    /// @dev Redeem shares for network token. Coprocessor will burn shares and send network token to the sender
+    /// @param amount The amount of shares to redeem
+    function redeem(uint amount)
+    external  {
+        revert('Not implemented');
+        // TODO burn shares from sender
+        // TODO separate event for Redeem
+        emit Bridge(type(uint).max, msg.sender, amount, coprocessor.balance);
     }
 
 
-    // ===== JOB =====
+    // ===== JOB ===== // TODO remove after
 
     function getResult(uint _job_id) public view returns (string memory) {
         return jobs[_job_id];
     }
 
     function callback(string calldata _result, uint256 _job_id) public {
-        if (msg.sender != coprocessor) revert OnlyCoprocessor();
+        if (msg.sender != coprocessor) revert;
         jobs[_job_id] = _result;
     }
 }

@@ -5,6 +5,7 @@ use ic_evm_utils::eth_send_raw_transaction::{contract_interaction, ContractDetai
 use crate::state::{mutate_state, read_state, State};
 
 pub async fn submit_result(result: String, job_id: U256) {
+    // TODO rebuild to use transfer_eth instead of contract_interaction
     // get necessary global state
     let contract_address = &read_state(State::get_logs_addresses)[0];
     let rpc_services = read_state(State::rpc_services);
@@ -47,7 +48,7 @@ pub async fn submit_result(result: String, job_id: U256) {
     // set the gas
     let gas = Some(U256::from(5000000));
 
-    // interac with the contract, this calls `eth_sendRawTransaction` under the hood
+    // interact with the contract, this calls `eth_sendRawTransaction` under the hood
     let status = contract_interaction(
         contract_details,
         gas,

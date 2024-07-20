@@ -19,9 +19,9 @@ pub async fn job(event_source: LogSource, event: LogEntry) {
     let new_job_event = NewJobEvent::from(event);
     println!("<<<NEW JOB>>>: {new_job_event:?}");
 
-    // this calculation would likely exceed an ethereum blocks gas limit
-    // but can easily be calculated on the IC
-    let result = fibonacci(20);
+    // TODO calculate amount out, based on value_in and coprocessor_balances over networks
+    // TODO read dst chain balance and calculate amount out
+    let result = new_job_event.value_in / 2; // for now we just divide the value_in by 2
     // we write the result back to the evm smart contract, creating a signature
     // on the transaction with chain key ecdsa and sending it to the evm via the
     // evm rpc canister
