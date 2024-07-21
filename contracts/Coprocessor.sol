@@ -14,40 +14,40 @@ contract Coprocessor {
         coprocessor = payable(_coprocessor);
     }
 
-    event Bridge(
-        uint indexed chainId,
-        address indexed receiver,
-        uint indexed valueIn,
-        uint coprocessorBalance
-    );
+    event Bridge(uint indexed toChainId, address indexed receiver, uint indexed valueIn, uint coprocessorBalance);
+    event Deliver(uint indexed fromChainId, address indexed receiver, uint indexed valueIn, uint coprocessorBalance);
+    event Deposit(address indexed depositor, uint indexed valueIn, uint coprocessorBalance);
+    event Redeem(address indexed receiver, uint indexed amount, uint coprocessorBalance);
 
     /// @dev Bridge the value to another chain
-    /// @param chainId The chain id to bridge to
+    /// @param toChainId The chain id to bridge to
     /// @param receiver The receiver address on the other chain
-    function bridge(uint chainId, address receiver)
+    function bridge(uint toChainId, address receiver)
     external payable  {
         coprocessor.transfer(msg.value);
-        if (chainId == REDEEM_CHAIN_ID) revert();
-        emit Bridge(chainId, receiver, msg.value, coprocessor.balance);
+        emit Bridge(toChainId, receiver, msg.value, coprocessor.balance);
     }
+
+    function deliver(uint fromChainId, address payable receiver)
+    external payable  {
+        if (msg.sender != coprocessor) revert();
+        receiver.transfer(msg.value);
+        emit Deliver(fromChainId, receiver, msg.value, coprocessor.balance);
+    }
+
 
     /// @dev Deposit network token to the coprocessor. Coprocessor will mint shares token to the sender
     function deposit()
     external payable  {
-        revert('Not implemented');
         coprocessor.transfer(msg.value);
-        // TODO separate event for deposit
-        emit Bridge(0, msg.sender, msg.value, coprocessor.balance);
+        emit Deposit(msg.sender, msg.value, coprocessor.balance);
     }
 
     /// @dev Redeem shares for network token. Coprocessor will burn shares and send network token to the sender
     /// @param amount The amount of shares to redeem
     function redeem(uint amount)
     external  {
-        revert('Not implemented');
-        // TODO burn shares from sender
-        // TODO separate event for Redeem
-        emit Bridge(type(uint).max, msg.sender, amount, coprocessor.balance);
+        emit Redeem(msg.sender, amount, coprocessor.balance);
     }
 
 
