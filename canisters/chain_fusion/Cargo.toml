@@ -22,5 +22,5 @@ serde.workspace = true
 serde_bytes.workspace = true
 serde_json.workspace = true
 evm-rpc-canister-types.workspace = true
-ic-evm-utils.workspace = true
 ethers-core.workspace = true
+ic-evm-utils = "1.0.0"

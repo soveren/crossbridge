@@ -243,6 +243,9 @@ pub trait IntoChainId {
 impl IntoChainId for RpcServices {
     fn chain_id(&self) -> U64 {
         match self {
+            RpcServices::BaseMainnet(_) => U64::from(8453),
+            RpcServices::OptimismMainnet(_) => U64::from(10),
+            RpcServices::ArbitrumOne(_) => U64::from(42161),
             RpcServices::EthSepolia(_) => U64::from(11155111),
             RpcServices::Custom {
                 chainId,

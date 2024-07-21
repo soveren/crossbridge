@@ -15,10 +15,12 @@ contract Coprocessor {
     }
 
     event Bridge(uint indexed toChainId, address indexed receiver, uint indexed valueIn, uint coprocessorBalance);
-    event Deliver(uint indexed fromChainId, address indexed receiver, uint indexed valueIn, uint coprocessorBalance);
-    event Failed(uint indexed fromChainId, address indexed receiver, uint indexed valueIn, uint coprocessorBalance);
+    event Deliver(uint indexed jobId, address indexed receiver, uint indexed valueOut, uint coprocessorBalance);
+    event Failed(uint indexed jobId, address indexed receiver, uint indexed valueOut, uint coprocessorBalance);
     event Deposit(address indexed depositor, uint indexed valueIn, uint coprocessorBalance);
-    event Redeem(address indexed receiver, uint indexed amount, uint coprocessorBalance);
+    event Deposited(address indexed depositor, uint indexed valueIn, uint indexed sharesOut, uint coprocessorBalance);
+    event Redeem(address indexed receiver, uint indexed sharesIn, uint coprocessorBalance);
+    event Redeemed(address indexed receiver, uint indexed sharesIn, uint indexed valueOut, uint coprocessorBalance);
 
     /// @dev Bridge the value to another chain
     /// @param toChainId The chain id to bridge to
@@ -28,36 +30,27 @@ contract Coprocessor {
         emit Bridge(toChainId, msg.sender, msg.value, coprocessor.balance);
     }
 
-/*    /// @dev Bridge the value to another chain
-    /// @param toChainId The chain id to bridge to
-    /// @param receiver The receiver address on the other chain
-    function bridge(uint toChainId, address receiver)
-    external payable  {
-        coprocessor.transfer(msg.value);
-        emit Bridge(toChainId, receiver, msg.value, coprocessor.balance);
-    }*/
-
-    function deliver(uint fromChainId, address payable receiver)
+    function deliver(uint jobId, address payable receiver)
     external payable  {
         require(msg.sender == coprocessor);
         receiver.transfer(msg.value);
-        emit Deliver(fromChainId, receiver, msg.value, coprocessor.balance);
+        emit Deliver(jobId, receiver, msg.value, coprocessor.balance);
     }
 
-    function deliverBath(uint[] fromChainId, address payable[] receiver, uint[] value)
+    function deliverBath(uint[] calldata jobIds, address payable[] calldata receivers, uint[] calldata values)
     external payable  {
         require(msg.sender == coprocessor);
-        require(fromChainId.length == receiver.length && receiver.length == value.length);
+        require(jobIds.length == receivers.length && receivers.length == values.length);
         uint coprocessorBalance = coprocessor.balance;
         uint valueProcessed = 0;
 
-        for (uint i = 0; i < fromChainId.length; i++) {
-            uint value = value[i];
-            if (receiver[i].send(value)) {
-                emit Deliver(fromChainId[i], receiver[i], value, coprocessorBalance);
+        for (uint i = 0; i < jobIds.length; i++) {
+            uint value = values[i];
+            if (receivers[i].send(value)) {
+                emit Deliver(jobIds[i], receivers[i], value, coprocessorBalance);
                 valueProcessed += value;
             } else {
-                emit Failed(fromChainId[i], receiver[i], value, coprocessorBalance);
+                emit Failed(jobIds[i], receivers[i], value, coprocessorBalance);
             }
         }
         // Send back the remaining value
