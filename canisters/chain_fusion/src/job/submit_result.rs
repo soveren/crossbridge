@@ -1,14 +1,15 @@
 use ethers_core::{types::U256};
 use ethers_core::abi::{Address, Token};
 use evm_rpc_canister_types::{SendRawTransactionStatus, EVM_RPC, RpcServices, EvmRpcCanister};
-
-use ic_evm_utils::eth_send_raw_transaction::{contract_interaction, ContractDetails, get_data, get_function, IntoChainId, send_raw_transaction};
+use ic_cdk::println;
+use ic_evm_utils::eth_send_raw_transaction::{ContractDetails, get_data, get_function, IntoChainId, send_raw_transaction};
 use ic_evm_utils::evm_signer::sign_eip1559_transaction;
 use ic_evm_utils::fees::{estimate_transaction_fees, FeeEstimates};
 use crate::state::{mutate_state, read_state, State};
 use ic_cdk::api::management_canister::ecdsa::EcdsaKeyId;
 use std::str::FromStr;
 use ethers_core::types::Eip1559TransactionRequest;
+use candid::Nat;
 
 pub async fn contract_interaction_with_value(
     contract_details: ContractDetails<'_>,
@@ -53,12 +54,21 @@ pub async fn contract_interaction_with_value(
     send_raw_transaction(tx, rpc_services, evm_rpc).await
 }
 
-pub async fn submit_result(job_id: U256, receiver_address: Address, value_out: U256) {
+pub async fn submit_result(job_id: U256, chain_id: U256, receiver_address: Address, value_out: U256) {
+    println!("!!!!! submit_result");
     // TODO rebuild to use transfer_eth instead of contract_interaction
     // get necessary global state
     let contract_address = &read_state(State::get_logs_addresses)[0];
-    let rpc_services = read_state(State::rpc_services);
-    let nonce = read_state(State::nonce);
+    let chains = read_state(State::chains);
+    let chain_id_str = chain_id.to_string();
+    println!("chain_id_str: {:?}", chain_id_str);
+    let chain_id_nat = Nat::from_str(&chain_id_str).expect("should convert chain_id_str");
+    println!("chain_id_nat: {:?}", chain_id_nat);
+    // let rpc_services = read_state(State::rpc_services);
+    // use chain instead of rpc_services
+    let rpc_services = chains.get(&chain_id_nat).expect("chain not found").clone();
+    let nonces = read_state(State::nonces);
+    let nonce = nonces.get(&chain_id_nat).unwrap_or(&U256::from(0)).clone(); // Get or default to 0
     let key_id = read_state(State::key_id);
 
     let abi_json = r#"
@@ -115,7 +125,7 @@ pub async fn submit_result(job_id: U256, receiver_address: Address, value_out: U
         SendRawTransactionStatus::Ok(transaction_hash) => {
             ic_cdk::println!("Success {transaction_hash:?}");
             mutate_state(|s| {
-                s.nonce += U256::from(1);
+                s.nonces.insert(chain_id_nat, nonce + 1);
             });
         }
         SendRawTransactionStatus::NonceTooLow => {

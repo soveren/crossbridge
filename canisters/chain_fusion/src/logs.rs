@@ -33,6 +33,7 @@ async fn process_logs() {
 pub async fn get_logs(from: &Nat, to: &Nat) -> GetLogsResult {
     let get_logs_address = read_state(|s| s.get_logs_addresses.clone());
     let get_logs_topics = read_state(|s| s.get_logs_topics.clone());
+    // TODO use from chains
     let rpc_services = read_state(|s| s.rpc_services.clone());
     let get_logs_args: GetLogsArgs = GetLogsArgs {
         fromBlock: Some(BlockTag::Number(from.clone())),

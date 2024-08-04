@@ -7,15 +7,12 @@ contract Coprocessor {
 
     mapping(uint => string) public jobs; // TODO remove after
 
-    uint private constant DEPOSIT_CHAIN_ID = 0;
-    uint private constant REDEEM_CHAIN_ID = type(uint).max;
-
     constructor(address _coprocessor) {
         coprocessor = payable(_coprocessor);
     }
 
     event Bridge(uint indexed toChainId, address indexed receiver, uint indexed valueIn, uint coprocessorBalance);
-    event Deliver(uint indexed jobId, address indexed receiver, uint indexed valueOut, uint coprocessorBalance);
+    event Delivery(uint indexed jobId, address indexed receiver, uint indexed valueOut, uint coprocessorBalance);
     event Failed(uint indexed jobId, address indexed receiver, uint indexed valueOut, uint coprocessorBalance);
     event Deposit(address indexed depositor, uint indexed valueIn, uint coprocessorBalance);
     event Deposited(address indexed depositor, uint indexed valueIn, uint indexed sharesOut, uint coprocessorBalance);
@@ -34,7 +31,7 @@ contract Coprocessor {
     external payable  {
         require(msg.sender == coprocessor);
         receiver.transfer(msg.value);
-        emit Deliver(jobId, receiver, msg.value, coprocessor.balance);
+        emit Delivery(jobId, receiver, msg.value, coprocessor.balance);
     }
 
     function deliverBath(uint[] calldata jobIds, address payable[] calldata receivers, uint[] calldata values)
@@ -47,7 +44,7 @@ contract Coprocessor {
         for (uint i = 0; i < jobIds.length; i++) {
             uint value = values[i];
             if (receivers[i].send(value)) {
-                emit Deliver(jobIds[i], receivers[i], value, coprocessorBalance);
+                emit Delivery(jobIds[i], receivers[i], value, coprocessorBalance);
                 valueProcessed += value;
             } else {
                 emit Failed(jobIds[i], receivers[i], value, coprocessorBalance);

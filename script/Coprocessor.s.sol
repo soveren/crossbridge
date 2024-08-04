@@ -17,11 +17,11 @@ contract MyScript is Script {
         Coprocessor coprocessor = new Coprocessor(chain_fusion_canister_address);
 
        // we create 3 jobs
-        for (uint256 index = 0; index < 3; index++) {
+     /*   for (uint256 index = 0; index < 3; index++) {
             // TODO replace to bridge job
 //            coprocessor.newJob{value: 0.1 ether}();
-            coprocessor.bridge{value: 0.1 ether}(555);
-        }
+            coprocessor.bridge{value: 0.1 ether}(9999);
+        }*/
 
         vm.stopBroadcast();
     }

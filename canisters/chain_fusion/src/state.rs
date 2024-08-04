@@ -1,6 +1,6 @@
 use evm_rpc_canister_types::{BlockTag, LogEntry, RpcService, RpcServices};
 
-use candid::Nat;
+use candid::{Deserialize, Nat};
 use ethers_core::types::U256;
 use ic_cdk::api::management_canister::ecdsa::EcdsaKeyId;
 use std::collections::{BTreeMap, BTreeSet, HashSet};
@@ -11,8 +11,17 @@ thread_local! {
     static STATE: RefCell<Option<State>> = RefCell::default();
 }
 
+// Extend LogEntry with chai_id U256
+#[derive(Deserialize, Debug, Clone, PartialEq)]
+pub struct ChainLogEntry {
+    pub chain_id: U256,
+    pub lo_entry: LogEntry,
+}
+
+
 #[derive(Debug, Clone)]
 pub struct State {
+    pub chains: BTreeMap<Nat, RpcServices>,
     pub rpc_services: RpcServices,
     pub rpc_service: RpcService,
     pub get_logs_addresses: Vec<String>,
@@ -26,7 +35,7 @@ pub struct State {
     pub ecdsa_pub_key: Option<Vec<u8>>,
     pub ecdsa_key_id: EcdsaKeyId,
     pub evm_address: Option<String>,
-    pub nonce: U256,
+    pub nonces: BTreeMap<Nat, U256>,
     pub block_tag: BlockTag,
 }
 
@@ -76,6 +85,10 @@ impl State {
     pub fn rpc_services(&self) -> RpcServices {
         self.rpc_services.clone()
     }
+    
+    pub fn chains(&self) -> BTreeMap<Nat, RpcServices> {
+        self.chains.clone()
+    }
 
     pub fn key_id(&self) -> EcdsaKeyId {
         self.ecdsa_key_id.clone()
@@ -85,8 +98,8 @@ impl State {
         self.get_logs_addresses.clone()
     }
 
-    pub fn nonce(&self) -> U256 {
-        self.nonce
+    pub fn nonces(&self) -> BTreeMap<Nat, U256> {
+        self.nonces.clone()
     }
 }
 

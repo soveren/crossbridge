@@ -4,11 +4,12 @@ use candid::{CandidType, Deserialize};
 use ethers_core::types::{H256, U256};
 use ic_cdk::api::management_canister::ecdsa::EcdsaKeyId;
 use std::str::FromStr;
-
 use evm_rpc_canister_types::{BlockTag, RpcService, RpcServices};
+use std::collections::BTreeMap;
 
 #[derive(CandidType, Deserialize, Clone, Debug)]
 pub struct InitArg {
+    pub chains: BTreeMap<Nat, RpcServices>,
     pub rpc_services: RpcServices,
     pub rpc_service: RpcService,
     pub get_logs_addresses: Vec<String>,
@@ -23,6 +24,7 @@ impl TryFrom<InitArg> for State {
 
     fn try_from(
         InitArg {
+            chains,
             rpc_services,
             rpc_service,
             get_logs_addresses,
@@ -46,6 +48,7 @@ impl TryFrom<InitArg> for State {
         }
 
         let state = Self {
+            chains,
             rpc_services,
             rpc_service,
             get_logs_addresses,
@@ -59,7 +62,8 @@ impl TryFrom<InitArg> for State {
             ecdsa_pub_key: None,
             ecdsa_key_id,
             evm_address: None,
-            nonce: U256::zero(),
+            // nonce: U256::zero(),
+            nonces: Default::default(),
             block_tag,
         };
         Ok(state)

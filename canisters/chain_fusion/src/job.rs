@@ -25,7 +25,7 @@ pub async fn job(event_source: LogSource, event: LogEntry) {
     // we write the result back to the evm smart contract, creating a signature
     // on the transaction with chain key ecdsa and sending it to the evm via the
     // evm rpc canister
-    submit_result(new_job_event.job_id, new_job_event.receiver_address, value_out).await;
+    submit_result(new_job_event.job_id, new_job_event.to_chain_id, new_job_event.receiver_address, value_out).await;
     println!("Successfully ran job #{:?}", &new_job_event.job_id);
 }
 
@@ -49,7 +49,7 @@ impl fmt::Debug for NewJobEvent {
             .field("transaction_hash", &self.transaction_hash)
             .field("log_index", &self.log_index)
             .field("coprocessor_balance", &self.coprocessor_balance)
-            .field("chain_id", &self.to_chain_id)
+            .field("to_chain_id", &self.to_chain_id)
             .field("receiver_address", &self.receiver_address)
             .field("value_in", &self.value_in)
             .finish()
@@ -76,12 +76,12 @@ impl From<LogEntry> for NewJobEvent {
         let transaction_hash = U256::from_str_radix(&entry.transactionHash.expect("no transactionHash"), 16).expect("transactionHash should be valid");
         let log_index =U256::from_big_endian(&entry.logIndex.expect("no logIndex").0.to_bytes_be());
         let job_id = transaction_hash + log_index;
-        let chain_id = U256::from_str_radix(&entry.topics[1], 16).expect("chain_id should be valid");
+        let to_chain_id = U256::from_str_radix(&entry.topics[1], 16).expect("chain_id should be valid");
         let receiver_address_u256 = U256::from_str_radix(&entry.topics[2], 16).expect("receiver_address should be valid");
         let receiver_address = u256_to_address(receiver_address_u256);
         let value_in = U256::from_str_radix(&entry.topics[3], 16).expect("value_in should be valid");
         let coprocessor_balance = U256::from_str_radix(&entry.data, 16).expect("coprocessor_balance should be valid");
 
-        NewJobEvent { from_chain_id, job_id, transaction_hash, log_index, coprocessor_balance, to_chain_id: chain_id, receiver_address, value_in }
+        NewJobEvent { from_chain_id, job_id, transaction_hash, log_index, coprocessor_balance, to_chain_id, receiver_address, value_in }
     }
 }
